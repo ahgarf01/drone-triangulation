@@ -34,12 +34,18 @@
         <thead><tr><th>Drone</th><th>Freq (MHz)</th><th>x (m)</th><th>y (m)</th><th>err σ (m)</th></tr></thead>
         <tbody></tbody>
       </table>
+      <table id="actuals" style="margin-top:8px;">
+        <thead><tr><th>Drone</th><th>Freq (MHz)</th><th>x (m)</th><th>y (m)</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
     <div class="card">
       <div id="map"></div>
     </div>
   </div>
-  <div class="foot">Green markers = stations; blue lines = AoA bearings; red marker = estimate; red circle = 1σ error radius.</div>
+  <div class="foot">
+    Green markers = stations; blue lines = AoA bearings; red marker = estimate; red circle = 1σ error radius; blue marker = actual position.
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

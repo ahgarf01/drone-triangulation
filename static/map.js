@@ -11,7 +11,7 @@ function metersToLatLng(xEast, yNorth, origin=ORIGIN) {
   return [lat, lon];
 }
 
-let map, stationLayer, rayLayer, droneLayer;
+let map, stationLayer, rayLayer, droneLayer, actualDroneLayer;
 function initMap() {
   map = L.map('map').setView([ORIGIN.lat, ORIGIN.lon], 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -20,6 +20,7 @@ function initMap() {
   stationLayer = L.layerGroup().addTo(map);
   rayLayer = L.layerGroup().addTo(map);
   droneLayer = L.layerGroup().addTo(map);
+  actualDroneLayer = L.layerGroup().addTo(map);
 }
 initMap();
 
@@ -27,6 +28,11 @@ async function fetchStations() {
   const urls = ["/station1", "/station2", "/station3"];
   const results = await Promise.all(urls.map(u => fetch(u).then(r => r.json())));
   return results;
+}
+
+async function fetchDrones() {
+  const result = await fetch("/drones").then(r => r.json());
+  return result;
 }
 
 function deg2rad(d){ return d*Math.PI/180; }
@@ -69,8 +75,8 @@ function solveByFrequency(stations){
   return solutions;
 }
 
-function draw(stations, solutions){
-  stationLayer.clearLayers(); rayLayer.clearLayers(); droneLayer.clearLayers();
+function draw(stations, solutions, drones){
+  stationLayer.clearLayers(); rayLayer.clearLayers(); droneLayer.clearLayers(); actualDroneLayer.clearLayers();
 
   // Stations
   stations.forEach((s, idx)=>{
@@ -100,6 +106,14 @@ function draw(stations, solutions){
     L.circle([lat, lon], {radius: sol.err, color:"#d61f1f", fill:false, opacity:0.6}).addTo(droneLayer);
   });
 
+  // Drones
+  drones.forEach(drone=>{
+    const [lat, lon] = metersToLatLng(drone.true_position[0], drone.true_position[1]);
+    L.circleMarker([lat, lon], {radius:5, color:"#2a6fdb", fill:true, fillOpacity:1})
+      .bindTooltip(`${(drone.frequency/1e6).toFixed(0)} MHz`, {permanent:true, direction:'right'})
+      .addTo(actualDroneLayer);
+  });
+
   // Fit bounds
   const latlngs = [];
   stations.forEach(s => latlngs.push(metersToLatLng(s.position[0], s.position[1])));
@@ -121,11 +135,26 @@ function updateTable(solutions){
   });
 }
 
+function updateActualsTable(drones){
+  const tbody = document.querySelector("#actuals tbody");
+  tbody.innerHTML = "";
+  drones.sort((a,b)=>a.frequency-b.frequency).forEach(drone=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${drone.id}</td>
+                    <td>${(drone.frequency/1e6).toFixed(3)}</td>
+                    <td>${drone.true_position[0].toFixed(1)}</td>
+                    <td>${drone.true_position[1].toFixed(1)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
 async function refresh(){
   const stations = await fetchStations();
   const solutions = solveByFrequency(stations);
-  draw(stations, solutions);
+  const drones = await fetchDrones();
+  draw(stations, solutions, drones);
   updateTable(solutions);
+  updateActualsTable(drones);
 }
 
 document.getElementById("refresh").addEventListener("click", refresh);

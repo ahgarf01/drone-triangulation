@@ -67,6 +67,12 @@ def station2():
 def station3():
     return jsonify(station_payload("station3"))
 
+
+@app.route("/drones")
+def drones():
+    return jsonify(DRONES)
+
+
 @app.route("/")
 @app.route("/interface")
 def interface():
