@@ -37,6 +37,16 @@ async function fetchDrones() {
 
 function deg2rad(d){ return d*Math.PI/180; }
 
+function calculate_standard_weights(stations, p_k) {
+  const weights = stations.map(s => {
+    const dx = s.pos[0] - p_k[0];
+    const dy = s.pos[1] - p_k[1];
+    const distSq = dx * dx + dy * dy;
+    return 1.0 / (distSq + 1e-9);
+  });
+  return weights;
+}
+
 function solveByFrequency(stations){
   const byFreq = new Map();
   stations.forEach((s, idx) => {
@@ -53,21 +63,56 @@ function solveByFrequency(stations){
   const solutions = [];
   for (const [freq, ms] of byFreq.entries()) {
     if (ms.length < 2) continue;
-    let A = [[0,0],[0,0]], c=[0,0];
-    ms.forEach(m => {
+    let A = Array(ms.length).fill(0).map(() => Array(2).fill(0));
+    let b = Array(ms.length).fill(0);
+    ms.forEach((m, i) => {
       const th = deg2rad(m.angleDeg);
-      const bx=Math.cos(th), by=Math.sin(th);
-      const P = [[1-bx*bx, -bx*by],[-bx*by, 1-by*by]];
-      A[0][0]+=P[0][0]; A[0][1]+=P[0][1];
-      A[1][0]+=P[1][0]; A[1][1]+=P[1][1];
-      c[0]+=P[0][0]*m.pos[0] + P[0][1]*m.pos[1];
-      c[1]+=P[1][0]*m.pos[0] + P[1][1]*m.pos[1];
+      const cos_a = Math.cos(th);
+      const sin_a = Math.sin(th);
+      A[i][0] = -sin_a;
+      A[i][1] = cos_a;
+      b[i] = -m.pos[0] * sin_a + m.pos[1] * cos_a;
     });
-    const det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
-    if (Math.abs(det)<1e-9) continue;
-    const invA=[[ A[1][1]/det, -A[0][1]/det],[-A[1][0]/det, A[0][0]/det]];
-    const x=[invA[0][0]*c[0]+invA[0][1]*c[1], invA[1][0]*c[0]+invA[1][1]*c[1]];
-    const sigmaTheta=5*Math.PI/180;
+
+    // Initial guess with unweighted least squares
+    let p_k;
+    try {
+      const A_t = [[A[0][0], A[1][0]], [A[0][1], A[1][1]]];
+      const A_t_A = [[A_t[0][0]*A[0][0] + A_t[0][1]*A[1][0], A_t[0][0]*A[0][1] + A_t[0][1]*A[1][1]], [A_t[1][0]*A[0][0] + A_t[1][1]*A[1][0], A_t[1][0]*A[0][1] + A_t[1][1]*A[1][1]]];
+      const det = A_t_A[0][0]*A_t_A[1][1] - A_t_A[0][1]*A_t_A[1][0];
+      if (Math.abs(det) < 1e-9) continue;
+      const A_t_A_inv = [[A_t_A[1][1]/det, -A_t_A[0][1]/det], [-A_t_A[1][0]/det, A_t_A[0][0]/det]];
+      const A_t_b = [A_t[0][0]*b[0] + A_t[0][1]*b[1], A_t[1][0]*b[0] + A_t[1][1]*b[1]];
+      p_k = [A_t_A_inv[0][0]*A_t_b[0] + A_t_A_inv[0][1]*A_t_b[1], A_t_A_inv[1][0]*A_t_b[0] + A_t_A_inv[1][1]*A_t_b[1]];
+    } catch (e) {
+      continue;
+    }
+
+    for (let i = 0; i < 10; i++) {
+      const weights = calculate_standard_weights(ms, p_k);
+      const W = Array(ms.length).fill(0).map(() => Array(ms.length).fill(0));
+      weights.forEach((w, j) => W[j][j] = w);
+
+      const A_t = [[A[0][0], A[1][0]], [A[0][1], A[1][1]]];
+      const A_t_W = [[A_t[0][0]*W[0][0], A_t[0][1]*W[1][1]], [A_t[1][0]*W[0][0], A_t[1][1]*W[1][1]]];
+      const A_t_W_A = [[A_t_W[0][0]*A[0][0] + A_t_W[0][1]*A[1][0], A_t_W[0][0]*A[0][1] + A_t_W[0][1]*A[1][1]], [A_t_W[1][0]*A[0][0] + A_t_W[1][1]*A[1][0], A_t_W[1][0]*A[0][1] + A_t_W[1][1]*A[1][1]]];
+      const det = A_t_W_A[0][0]*A_t_W_A[1][1] - A_t_W_A[0][1]*A_t_W_A[1][0];
+      if (Math.abs(det) < 1e-9) break;
+
+      const A_t_W_A_inv = [[A_t_W_A[1][1]/det, -A_t_W_A[0][1]/det], [-A_t_W_A[1][0]/det, A_t_W_A[0][0]/det]];
+      const A_t_W_b = [A_t_W[0][0]*b[0] + A_t_W[0][1]*b[1], A_t_W[1][0]*b[0] + A_t_W[1][1]*b[1]];
+      const p_next = [A_t_W_A_inv[0][0]*A_t_W_b[0] + A_t_W_A_inv[0][1]*A_t_W_b[1], A_t_W_A_inv[1][0]*A_t_W_b[0] + A_t_W_A_inv[1][1]*A_t_W_b[1]];
+
+      const norm = Math.sqrt(Math.pow(p_next[0] - p_k[0], 2) + Math.pow(p_next[1] - p_k[1], 2));
+      if (norm < 1e-4) {
+        p_k = p_next;
+        break;
+      }
+      p_k = p_next;
+    }
+
+    const x = p_k;
+    const sigmaTheta=4.2466*Math.PI/180;
     const w = 1.0 / (sigmaTheta * sigmaTheta);
     let F11 = 0, F12 = 0, F22 = 0;
     ms.forEach(m => {
