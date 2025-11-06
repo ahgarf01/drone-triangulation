@@ -101,9 +101,11 @@ function solveByFrequency(stations){
     const det_F = F11*F22 - F12*F12;
     const discr = tr*tr - 4*det_F;
     if (discr < 0) continue;
-    const eig_min = 0.5 * (tr - Math.sqrt(discr));
-    if (eig_min <= 0) continue;
-    const err = Math.sqrt(1.0/eig_min);
+    const eig_1 = 0.5 * (tr + Math.sqrt(discr));
+    const eig_2 = 0.5 * (tr - Math.sqrt(discr));
+    if (eig_2 <= 0) continue;
+    const drms = Math.sqrt(1/eig_1 + 1/eig_2);
+    const err = 1.73 * drms;
     solutions.push({frequency:Number(freq), xy:x, err});
   }
   return solutions;

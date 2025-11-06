@@ -7,7 +7,7 @@ import ast
 # -------------------------
 # Settings
 # -------------------------
-avg_aoa_error_deg = 5.0
+average_aoa_error_deg = 5.0
 use_log_scale = True
 min_clip_error = 1e-6
 max_display_error = 500
@@ -82,7 +82,7 @@ def compute_error_grid_vectorized(xmin, xmax, ymin, ymax, resolution):
     x, y = np.linspace(xmin, xmax, resolution), np.linspace(ymin, ymax, resolution)
     X, Y = np.meshgrid(x, y)
     F11, F12, F22 = np.zeros_like(X), np.zeros_like(X), np.zeros_like(X)
-    sigma_theta = math.radians(avg_aoa_error_deg)
+    sigma_theta = math.radians(average_aoa_error_deg)
     w = 1.0 / (sigma_theta * sigma_theta)
     too_close_mask = np.zeros_like(X, dtype=bool)
     for xi, yi in zip(xs, ys):
@@ -156,7 +156,7 @@ def update_plot(event=None):
     
     ax.set_xlim(xmin, xmax); ax.set_ylim(ymin, ymax)
     ax.set_xlabel("X position of drone (m)"); ax.set_ylabel("Y position of drone (m)")
-    ax.set_title(f"Triangulation Error Contour Map\nAoA Error={avg_aoa_error_deg}°")
+    ax.set_title(f"Triangulation Error Contour Map\nAoA Error={average_aoa_error_deg}°")
     fig.canvas.draw_idle()
 
 # --- MODIFIED ---
@@ -205,7 +205,7 @@ def on_motion(event):
         noisy_angles = []
         for sx, sy in stations:
             true_angle = math.atan2(y_cursor - sy, x_cursor - sx)
-            angle_error_rad = np.random.normal(scale=math.radians(avg_aoa_error_deg))
+            angle_error_rad = np.random.normal(scale=math.radians(average_aoa_error_deg))
             noisy_angles.append(true_angle + angle_error_rad)
         if i == num_crosses - 1: last_noisy_angles = noisy_angles
         est_x, est_y = estimate_intersection(stations, noisy_angles)

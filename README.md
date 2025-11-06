@@ -1,27 +1,33 @@
-# Drone Triangulation — Leaflet Map Version
+# Drone Triangulation
 
-This version adds a **real basemap** using **Leaflet + OpenStreetMap tiles** while keeping the same Flask JSON
-API (`/station1`, `/station2`, `/station3`) and **browser-side triangulation**.
+This web application provides a real-time map interface for drone triangulation. It displays the estimated and actual positions of drones based on data from multiple stations.
 
-- Stations and drones are still defined in **local meters (x east, y north)** in `server.py`.
-- The web client converts those to **latitude/longitude** around a chosen origin (`ORIGIN` in `static/map.js`).
-- Bearings, station markers, estimated drone positions, and the **1σ error circle** are rendered on the map.
+## Features
 
-## Quick start
-```bash
-pip install Flask
-python server.py
-# then open http://127.0.0.1:8000/interface
-```
+- **Real-time Map:** Uses Leaflet and OpenStreetMap to display a real-time map with drone and station positions.
+- **Position Estimation:** Calculates the estimated position of drones using the Iterative Weighted Least Squares (IWLS) algorithm.
+- **Error Visualization:** Displays a 95% confidence radius for the estimated drone positions.
+- **Simulation Mode:** The application can be run in a simulation mode with configurable noise and drone positions.
 
-## Changing the map location
-Edit `static/map.js`:
-```js
-const ORIGIN = { lat: 40.2783, lon: -111.7173 };
-```
-This is the reference point for converting meters → lat/lon (equirectangular approximation).
-Put it near your master station or the centroid of your layout.
+## Quick Start
 
-## Notes
-- You can keep these endpoints identical when porting to Django.
-- To change station geometry or add drones, edit `STATIONS` and `DRONES` in `server.py`.
+1. **Install dependencies:**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Run the server:**
+
+   ```bash
+   python server.py
+   ```
+
+3. **Open the interface:**
+
+   Open your web browser and navigate to `http://127.0.0.1:8000/`
+
+## Configuration
+
+- **Map Location:** To change the map's origin, edit the `ORIGIN` constant in `static/map.js`.
+- **Simulation Parameters:** To change the simulation parameters, such as the number of drones, their positions, and the noise level, edit the `DRONES` and `AOA_STD_DEG` variables in `server.py`.
