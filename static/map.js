@@ -60,48 +60,20 @@ function solveByFrequency(stations){
       });
     });
   });
+
   const solutions = [];
   for (const [freq, ms] of byFreq.entries()) {
     if (ms.length < 2) continue;
-    let A = Array(ms.length).fill(0).map(() => Array(2).fill(0));
-    let b = Array(ms.length).fill(0);
-    ms.forEach((m, i) => {
-      const th = deg2rad(m.angleDeg);
-      const cos_a = Math.cos(th);
-      const sin_a = Math.sin(th);
-      A[i][0] = -sin_a;
-      A[i][1] = cos_a;
-      b[i] = -m.pos[0] * sin_a + m.pos[1] * cos_a;
-    });
 
-    // Initial guess with unweighted least squares
-    let p_k;
-    try {
-      const A_t = [[A[0][0], A[1][0]], [A[0][1], A[1][1]]];
-      const A_t_A = [[A_t[0][0]*A[0][0] + A_t[0][1]*A[1][0], A_t[0][0]*A[0][1] + A_t[0][1]*A[1][1]], [A_t[1][0]*A[0][0] + A_t[1][1]*A[1][0], A_t[1][0]*A[0][1] + A_t[1][1]*A[1][1]]];
-      const det = A_t_A[0][0]*A_t_A[1][1] - A_t_A[0][1]*A_t_A[1][0];
-      if (Math.abs(det) < 1e-9) continue;
-      const A_t_A_inv = [[A_t_A[1][1]/det, -A_t_A[0][1]/det], [-A_t_A[1][0]/det, A_t_A[0][0]/det]];
-      const A_t_b = [A_t[0][0]*b[0] + A_t[0][1]*b[1], A_t[1][0]*b[0] + A_t[1][1]*b[1]];
-      p_k = [A_t_A_inv[0][0]*A_t_b[0] + A_t_A_inv[0][1]*A_t_b[1], A_t_A_inv[1][0]*A_t_b[0] + A_t_A_inv[1][1]*A_t_b[1]];
-    } catch (e) {
-      continue;
-    }
+    // Initial guess using unweighted least squares
+    let p_k = estimate_position_unweighted(ms);
+    if (!p_k) continue;
 
+    // Iteratively improve the estimate using weighted least squares
     for (let i = 0; i < 10; i++) {
       const weights = calculate_standard_weights(ms, p_k);
-      const W = Array(ms.length).fill(0).map(() => Array(ms.length).fill(0));
-      weights.forEach((w, j) => W[j][j] = w);
-
-      const A_t = [[A[0][0], A[1][0]], [A[0][1], A[1][1]]];
-      const A_t_W = [[A_t[0][0]*W[0][0], A_t[0][1]*W[1][1]], [A_t[1][0]*W[0][0], A_t[1][1]*W[1][1]]];
-      const A_t_W_A = [[A_t_W[0][0]*A[0][0] + A_t_W[0][1]*A[1][0], A_t_W[0][0]*A[0][1] + A_t_W[0][1]*A[1][1]], [A_t_W[1][0]*A[0][0] + A_t_W[1][1]*A[1][0], A_t_W[1][0]*A[0][1] + A_t_W[1][1]*A[1][1]]];
-      const det = A_t_W_A[0][0]*A_t_W_A[1][1] - A_t_W_A[0][1]*A_t_W_A[1][0];
-      if (Math.abs(det) < 1e-9) break;
-
-      const A_t_W_A_inv = [[A_t_W_A[1][1]/det, -A_t_W_A[0][1]/det], [-A_t_W_A[1][0]/det, A_t_W_A[0][0]/det]];
-      const A_t_W_b = [A_t_W[0][0]*b[0] + A_t_W[0][1]*b[1], A_t_W[1][0]*b[0] + A_t_W[1][1]*b[1]];
-      const p_next = [A_t_W_A_inv[0][0]*A_t_W_b[0] + A_t_W_A_inv[0][1]*A_t_W_b[1], A_t_W_A_inv[1][0]*A_t_W_b[0] + A_t_W_A_inv[1][1]*A_t_W_b[1]];
+      const p_next = estimate_position_weighted(ms, weights);
+      if (!p_next) break;
 
       const norm = Math.sqrt(Math.pow(p_next[0] - p_k[0], 2) + Math.pow(p_next[1] - p_k[1], 2));
       if (norm < 1e-4) {
@@ -135,6 +107,63 @@ function solveByFrequency(stations){
     solutions.push({frequency:Number(freq), xy:x, err});
   }
   return solutions;
+}
+
+function estimate_position_unweighted(ms) {
+  const A = [];
+  const b = [];
+  ms.forEach(m => {
+    const th = deg2rad(m.angleDeg);
+    const cos_a = Math.cos(th);
+    const sin_a = Math.sin(th);
+    A.push([-sin_a, cos_a]);
+    b.push(-m.pos[0] * sin_a + m.pos[1] * cos_a);
+  });
+
+  return solve_least_squares(A, b);
+}
+
+function estimate_position_weighted(ms, weights) {
+  const A = [];
+  const b = [];
+  ms.forEach((m, i) => {
+    const th = deg2rad(m.angleDeg);
+    const cos_a = Math.cos(th);
+    const sin_a = Math.sin(th);
+    const w = Math.sqrt(weights[i]);
+    A.push([-sin_a * w, cos_a * w]);
+    b.push((-m.pos[0] * sin_a + m.pos[1] * cos_a) * w);
+  });
+
+  return solve_least_squares(A, b);
+}
+
+function solve_least_squares(A, b) {
+  const num_rows = A.length;
+  if (num_rows < 2) return null;
+
+  const At = [[], []];
+  for (let i = 0; i < num_rows; i++) {
+    At[0].push(A[i][0]);
+    At[1].push(A[i][1]);
+  }
+
+  const AtA = [[0, 0], [0, 0]];
+  AtA[0][0] = At[0].reduce((sum, val, i) => sum + val * A[i][0], 0);
+  AtA[0][1] = At[0].reduce((sum, val, i) => sum + val * A[i][1], 0);
+  AtA[1][0] = At[1].reduce((sum, val, i) => sum + val * A[i][0], 0);
+  AtA[1][1] = At[1].reduce((sum, val, i) => sum + val * A[i][1], 0);
+
+  const det = AtA[0][0] * AtA[1][1] - AtA[0][1] * AtA[1][0];
+  if (Math.abs(det) < 1e-9) return null;
+
+  const AtA_inv = [[AtA[1][1] / det, -AtA[0][1] / det], [-AtA[1][0] / det, AtA[0][0] / det]];
+
+  const Atb = [0, 0];
+  Atb[0] = At[0].reduce((sum, val, i) => sum + val * b[i], 0);
+  Atb[1] = At[1].reduce((sum, val, i) => sum + val * b[i], 0);
+
+  return [AtA_inv[0][0] * Atb[0] + AtA_inv[0][1] * Atb[1], AtA_inv[1][0] * Atb[0] + AtA_inv[1][1] * Atb[1]];
 }
 
 function draw(stations, solutions, drones){
