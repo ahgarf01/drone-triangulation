@@ -13,7 +13,7 @@ function metersToLatLng(xEast, yNorth, origin=ORIGIN) {
 
 let map, stationLayer, rayLayer, droneLayer, actualDroneLayer;
 function initMap() {
-  map = L.map('map').setView([ORIGIN.lat, ORIGIN.lon], 14);
+  map = L.map('map', { zoomAnimation: false }).setView([ORIGIN.lat, ORIGIN.lon], 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
