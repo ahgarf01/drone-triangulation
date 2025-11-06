@@ -4,7 +4,8 @@ import math, random, os
 app = Flask(__name__, static_url_path="", static_folder="static")
 
 # ---------------- Simulation knobs ----------------
-AOA_STD_DEG = 5.0           # 1-sigma AoA noise per station (deg)
+# 50th percentile error is 5.0 degrees, so std dev is ~4.2466
+AOA_STD_DEG = 4.2466           # 1-sigma AoA noise per station (deg)
 STATION_HEADING_DEG = 0.0   # Optional: facing direction to report
 RANDOMIZE_EACH_REQUEST = True
 SEED = None                 # Set to an int to make noise deterministic
