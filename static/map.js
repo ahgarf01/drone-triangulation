@@ -68,8 +68,25 @@ function solveByFrequency(stations){
     const invA=[[ A[1][1]/det, -A[0][1]/det],[-A[1][0]/det, A[0][0]/det]];
     const x=[invA[0][0]*c[0]+invA[0][1]*c[1], invA[1][0]*c[0]+invA[1][1]*c[1]];
     const sigmaTheta=5*Math.PI/180;
-    const covTrace=(invA[0][0]+invA[1][1])*(sigmaTheta*sigmaTheta);
-    const err=Math.sqrt(Math.max(0,covTrace));
+    const w = 1.0 / (sigmaTheta * sigmaTheta);
+    let F11 = 0, F12 = 0, F22 = 0;
+    ms.forEach(m => {
+      const dx = x[0] - m.pos[0];
+      const dy = x[1] - m.pos[1];
+      const r2 = dx*dx + dy*dy;
+      if (r2 < 1e-12) return;
+      const hx = -dy / r2;
+      const hy = dx / r2;
+      F11 += hx*hx; F12 += hx*hy; F22 += hy*hy;
+    });
+    F11 *= w; F12 *= w; F22 *= w;
+    const tr = F11 + F22;
+    const det_F = F11*F22 - F12*F12;
+    const discr = tr*tr - 4*det_F;
+    if (discr < 0) continue;
+    const eig_min = 0.5 * (tr - Math.sqrt(discr));
+    if (eig_min <= 0) continue;
+    const err = Math.sqrt(1.0/eig_min);
     solutions.push({frequency:Number(freq), xy:x, err});
   }
   return solutions;
