@@ -6,7 +6,6 @@ This web application provides a real-time map interface for drone triangulation.
 
 - **Real-time Map:** Uses Leaflet and OpenStreetMap to display a real-time map with drone and station positions.
 - **Position Estimation:** Calculates the estimated position of drones using the Iterative Weighted Least Squares (IWLS) algorithm.
-- **Error Visualization:** Displays a 95% confidence radius for the estimated drone positions.
 - **Simulation Mode:** The application can be run in a simulation mode with configurable noise and drone positions.
 
 ## Quick Start
