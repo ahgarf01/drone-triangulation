@@ -22,7 +22,6 @@ if SEED is not None:
 
 # Fixed station positions in meters
 STATIONS = {
-    STATIONS = {
     "station1": {"position": (0.0, 0.0), "heading": 0.0},}
     "station2": {"position": ( 50.0,   0.0), "heading": STATION_HEADING_DEG},
     "station3": {"position": (  0.0,  87.0), "heading": STATION_HEADING_DEG},
