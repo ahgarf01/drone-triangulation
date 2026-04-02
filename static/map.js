@@ -1,5 +1,5 @@
-const ORIGIN_LAT = 40.7670737;
-const ORIGIN_LON = -111.9271214;
+const ORIGIN_LAT = 40.290449;
+const ORIGIN_LON = -111.740403;
 
 const map = L.map("map").setView([ORIGIN_LAT, ORIGIN_LON], 17);
 
