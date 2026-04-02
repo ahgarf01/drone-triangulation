@@ -47,9 +47,10 @@ function drawSingleStation(station) {
     .addTo(stationLayer);
 
   const drones = station.drones || [];
+
   drones.forEach((d) => {
     const angle = Number(d.angle || 0);
-    const len = 250; // meters of displayed bearing line
+    const len = 250; // meters
     const th = deg2rad(angle);
 
     const ex = sx + len * Math.cos(th);
@@ -78,7 +79,10 @@ function updateTable(station) {
 
   tbody.innerHTML = "";
 
-  const drones = (station && station.drones) ? station.drones : [];
+  const drones = station?.drones || [];
+  const lastUpdate = station?.last_update
+    ? new Date(station.last_update * 1000).toLocaleTimeString()
+    : "-";
 
   drones.forEach((d) => {
     const tr = document.createElement("tr");
@@ -86,7 +90,7 @@ function updateTable(station) {
       <td>${d.id || "-"}</td>
       <td>${(Number(d.frequency || 0) / 1e6).toFixed(3)}</td>
       <td>${Number(d.angle || 0).toFixed(1)}°</td>
-      <td>${station.last_update ? new Date(station.last_update * 1000).toLocaleTimeString() : "-"}</td>
+      <td>${lastUpdate}</td>
     `;
     tbody.appendChild(tr);
   });
