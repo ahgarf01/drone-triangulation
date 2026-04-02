@@ -24,7 +24,7 @@
 <body>
   <header>
     <strong>Drone Triangulation Interface</strong>
-    <span class="muted"> • Leaflet basemap with browser-side triangulation</span>
+    <span class="muted"> • Single-station AoA map</span>
   </header>
   <div class="wrap">
     <div class="card">
@@ -32,9 +32,17 @@
       <div class="muted" style="margin-top:8px;">
         Noise model: 1σ AoA = 5° per station. Stations & estimates are projected onto the basemap from local meter coords.
       </div>
-      <table id="estimates" style="margin-top:8px;">
-        <thead><tr><th>Drone</th><th>Freq (MHz)</th><th>x (m)</th><th>y (m)</th><th>err σ (m)</th></tr></thead>
+      <table id="estimates">
+  <thead>
+    <tr>
+           <th>Drone</th>
+           <th>Freq (MHz)</th>
+           <th>Angle (deg)</th>
+           <th>Last Update</th>
+          </tr>
+         </thead>
         <tbody></tbody>
+       </table>
       </table>
       <table id="actuals" style="margin-top:8px;">
         <thead><tr><th>Drone</th><th>Freq (MHz)</th><th>x (m)</th><th>y (m)</th></tr></thead>
@@ -48,7 +56,7 @@
     </div>
   </div>
   <div class="foot">
-    Green markers = stations; blue lines = AoA bearings; red marker = estimate; red circle = 1σ error radius; blue marker = actual position.
+    Green marker = station; blue line = measured angle-of-arrival bearing.
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
